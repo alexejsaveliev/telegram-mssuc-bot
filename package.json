@@ -1,0 +1,26 @@
+{
+  "name": "mss_url_cnvrtr_bot",
+  "version": "1.0.0",
+  "description": "Music Streaming Services URL Converter",
+  "main": "app/index.js",
+  "scripts": {
+    "tsc": "tsc",
+    "dev": "ts-node-dev --respawn --transpileOnly ./app/app.ts",
+    "prod": "tsc && node ./build/app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "dotenv": "^8.2.0",
+    "from": "^0.1.7",
+    "import": "0.0.6",
+    "telegraf": "^3.36.0",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "typescript": "^3.7.5",
+    "winston": "^3.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.2"
+  }
+}
