@@ -1,9 +1,10 @@
 import Telegraf, { ContextMessageUpdate, Context } from 'telegraf';
 import axios from 'axios';
-import querystring from 'querystring';
 
 import logger from './utils/logger'
 import { TELEGRAM_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_REFRESH_TOKEN, SPOTIFY_SECRET } from './utils/secrets';
+import { log, error } from 'winston';
+import winston = require('winston/lib/winston/config');
 
 const allowedServices = [
     { id: 'open.spotify.com', name: 'Spotify' },
@@ -21,16 +22,22 @@ bot.on('text', async (ctx: ContextMessageUpdate) => {
 
     if (messageIncludeLink) {
         console.log(message)
-        const newLink = await getSpotifyURL(message);
-        if (newLink) {
-            ctx.reply(newLink);
+        let res = '';
+        try {
+            res = await getSpotifyURL(message);
+        } catch (error) {
+            res = error.message;
+        }
+       
+        if (res) {
+            ctx.replyWithHTML(res);
         }
     }
 });
 
 
 async function getSpotifyURL(url: string) {
-    // console.log(url)
+    console.log(url)
     let baseUrl = 'https://itunes.apple.com/';
     let searchType = 'album';
     if (!url.includes('/album')) {
@@ -41,7 +48,7 @@ async function getSpotifyURL(url: string) {
         searchType = 'song';
     }
 
-    let srtArr = url.match(/\w+$/g) || [];
+    let srtArr = url.match(/\w+$/g) || []; //id
     if (!srtArr.length) {
         return ''
     }
@@ -52,12 +59,24 @@ async function getSpotifyURL(url: string) {
         const res = await axios.get(searchUrl);
         console.log(res.data);
         if (res.data?.resultCount) {
-            const {artistName, collectionType, collectionName} = res.data.results[0];
-            const spotifyData = await getSpotifyData(searchType, cleanString(artistName + ' ' + collectionName));
+            const {artistName, trackName = '', collectionName} = res.data.results[0];
+            const queryString = cleanString(`${ artistName } ${ collectionName } ${ trackName } `);
+
+            const spotifyData = await getSpotifyData(searchType === 'song' ? 'track' : searchType, queryString);
+
+            const searchCollection = searchType === 'song' ? spotifyData.tracks : spotifyData.albums;
             
-            if (spotifyData.albums?.total) {
-                return spotifyData.albums.items[0].external_urls.spotify;
+            if (searchCollection?.total) {
+                return searchCollection.items[0].external_urls.spotify;
+            } else {
+                const errorMsg = `Cant find spotify data for query: <b>${ queryString }</b>`;
+                logger.warn(errorMsg);
+                throw new Error(errorMsg);
             }
+        } else {
+            const errorMsg = 'Cant find iTunes data. URL: ' + searchUrl;
+            logger.warn(errorMsg);
+            throw new Error('Cant find iTunes data 😢');
         }
     } catch (error) {
         throw error;
@@ -78,6 +97,7 @@ async function getSpotifyData(type: string, queryString: string) {
                         'Accept': 'application/json',
                         'Content-Type': 'application/json'}
           });
+        //   console.log(res.data.tracks.items)
         return res.data;
     } catch (error) {
         throw error;
@@ -108,7 +128,14 @@ async function getSpotifyAccessToken() {
 }
 
 function cleanString(str:string) {
-    return str.replace(' - EP', '');
+    const words = [
+        ' - EP',
+        '[Deluxe Version]'
+    ];
+
+    let newStr = str;
+    words.forEach(el => newStr = str.replace(el, ''))
+    return str;
 }
 
 bot.launch();
