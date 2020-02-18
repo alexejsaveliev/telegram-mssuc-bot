@@ -10,6 +10,8 @@ const allowedServices = [
     { id: 'music.apple.com', name: 'Apple Music' }
 ];
 
+const spotifyApiBaseURL = 'https://api.spotify.com/v1';
+
 interface MusicData {
     artist: string,
     album: string,
@@ -30,6 +32,7 @@ bot.on('text', async (ctx: ContextMessageUpdate) => {
         let res = '';
         try {
             res = await getSpotifyURL(message);
+            getSpotifyDataByURL(res);
         } catch (error) {
             res = '😢 ' + error.message;
         }
@@ -40,23 +43,22 @@ bot.on('text', async (ctx: ContextMessageUpdate) => {
     }
 });
 
+bot.launch();
 
-async function getSpotifyURL(url: string) {
+
+async function getSpotifyURL(url: string): Promise<string> {
     // console.log(url)
 
-    let baseUrl = 'https://itunes.apple.com/';
-    let searchType = 'album';
     if (!url.includes('/album')) {
         return ''
     }
-
 
     try {
         const songData = await getAppleMusicDataByURL(url);
 
         const queryString = cleanString(`${songData.artist} ${songData.song ? songData.song : songData.album}`);
 
-        const spotifyData = await getSpotifyData(songData.song ? 'track' : searchType, queryString);
+        const spotifyData = await getSpotifyData(songData.song ? 'track' : 'album', queryString);
 
         const searchCollection = songData.song ? spotifyData.tracks : spotifyData.albums;
 
@@ -140,6 +142,47 @@ async function getSpotifyAccessToken() {
     }
 }
 
+async function getSpotifyDataByURL(url:string): Promise<MusicData> {
+    const replaceArr = [
+        {from: 'https://open.spotify.com', to: spotifyApiBaseURL},
+        {from: 'track', to: 'tracks'},
+        {from: 'album', to: 'albums'},
+    ];
+    const supportedTypes = ['track', 'album'];
+    const allowedLink = supportedTypes.some(el => url.includes(el));
+    if (!allowedLink) {
+        throw new Error('Unsupported link');
+    }
+    let reqUrl = url;
+    replaceArr.forEach(el => {
+        reqUrl = reqUrl.replace(el.from, el.to);
+    })
+    try {
+        const res = await axios.get(reqUrl, {
+            headers: {
+                'Authorization': `Bearer ${await getSpotifyAccessToken()}`
+            }
+        });
+
+        // console.log(res.data);
+        const itIsAlbum = res.data.type === 'album';
+
+        const resultData: MusicData = {
+            artist: res.data.artists['0'].name,
+            album: itIsAlbum ? res.data.name : res.data.album.name
+        };
+
+        if (!itIsAlbum) {
+            resultData.song = res.data.name
+        }
+
+        return resultData
+
+    } catch (error) {
+        throw new Error('Error while receiving spotify data. ' + error.message);
+    }
+}
+
 function cleanString(str: string) {
     const words = [
         ' - EP',
@@ -151,5 +194,3 @@ function cleanString(str: string) {
     words.forEach(el => newStr = str.replace(el, ''))
     return newStr;
 }
-
-bot.launch();
