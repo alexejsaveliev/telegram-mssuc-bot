@@ -15,6 +15,7 @@
     "dotenv": "^8.2.0",
     "from": "^0.1.7",
     "import": "0.0.6",
+    "node-html-parser": "^1.2.5",
     "querystring": "^0.2.0",
     "telegraf": "^3.36.0",
     "ts-node-dev": "^1.0.0-pre.44",
