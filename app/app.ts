@@ -1,6 +1,7 @@
-import Telegraf, { ContextMessageUpdate, Context } from 'telegraf';
+import Telegraf, { ContextMessageUpdate } from 'telegraf';
 import axios from 'axios';
-import { parse } from 'node-html-parser';
+import { parse, HTMLElement } from 'node-html-parser';
+import qs from 'querystring';
 
 import logger from './utils/logger'
 import { TELEGRAM_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_REFRESH_TOKEN, SPOTIFY_SECRET } from './utils/secrets';
@@ -25,21 +26,26 @@ bot.start((ctx: ContextMessageUpdate) => ctx.reply('Welcome'));
 bot.help((ctx: ContextMessageUpdate) => ctx.reply('Send me a sticker'));
 bot.on('text', async (ctx: ContextMessageUpdate) => {
     const message = ctx.update.message?.text || '';
-    const messageIncludeLink = allowedServices.some(({ id }) => message.includes(id));
+    // const messageIncludeLink = allowedServices.some(({ id }) => message.includes(id));
 
-    if (messageIncludeLink) {
-        // console.log(message)
-        let res = '';
-        try {
-            res = await getSpotifyURL(message);
-            getSpotifyDataByURL(res);
-        } catch (error) {
-            res = '😢 ' + error.message;
-        }
+    let respMsg = '';
 
-        if (res) {
-            ctx.replyWithHTML(res);
+    try {
+        if (message.includes('music.apple.com')) {
+            // console.log(message)
+            respMsg = await getSpotifyURL(message);
+        } else if (message.includes('open.spotify.com')) {
+            const spotifyData = await getSpotifyDataByURL(message);
+            respMsg = await getAppleMusicURL(spotifyData);
+        } else {
+            respMsg = 'Unsupported data 🤷‍♂️';
         }
+    } catch (error) {
+        respMsg = '😢 ' + error.message;
+    }
+
+    if (respMsg) {
+        ctx.replyWithHTML(respMsg);
     }
 });
 
@@ -65,9 +71,9 @@ async function getSpotifyURL(url: string): Promise<string> {
         if (searchCollection?.total) {
             return searchCollection.items[0].external_urls.spotify;
         } else {
-            const errorMsg = `Cant find spotify data for query: <b>${queryString}</b>`;
+            const errorMsg = `Cant find spotify data for query: ${queryString}, URL: ${url}`;
             logger.warn(errorMsg);
-            throw new Error(errorMsg);
+            throw new Error(`Cant find spotify data for query: <b>${queryString}</b>`);
         }
 
     } catch (error) {
@@ -84,15 +90,21 @@ async function getAppleMusicDataByURL(url: string): Promise<MusicData> {
         const res = await axios.get(url);
         const root = parse(res.data);
 
-        resData.album = root.querySelector('.album-header .product-header__title').text?.trim();
-        resData.artist = root.querySelector('.album-header .album-header__identity a').text.trim();
-        const song = root.querySelector('.product-hero__tracks table .is-deep-linked .table__row__titles .we-selectable-item__link-text__headline')?.text;
-        if (song) {
-            resData.song = song.trim();
+        if (root.valid) {
+            resData.album = (<HTMLElement>root).querySelector('.album-header .product-header__title').text.trim();
+            resData.artist = (<HTMLElement>root).querySelector('.album-header .album-header__identity').text.trim();
+            const song = (<HTMLElement>root).querySelector('.product-hero__tracks table .is-deep-linked .table__row__titles .we-selectable-item__link-text__headline')?.text;
+            if (song) {
+                resData.song = song.trim();
+            }
+        } else {
+            throw new Error("HTML response does not valid");
         }
 
-        return resData
+        return resData;
+
     } catch (error) {
+        logger.error('Error while parsing AppleMusic data! --> ' + error.message + ' | URL: ' + url);
         throw new Error('Error while parsing AppleMusic data! --> ' + error.message);
     }
 }
@@ -105,11 +117,9 @@ async function getSpotifyData(type: string, queryString: string) {
         const res = await axios({
             method: 'get',
             url: `https://api.spotify.com/v1/search?q=${encodeURI(queryString)}&type=${type}`,
-            responseType: 'json',
+            responseType: 'json', 
             headers: {
-                'Authorization': 'Bearer ' + accessToken,
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                'Authorization': 'Bearer ' + accessToken
             }
         });
         //   console.log(res.data.tracks.items)
@@ -142,11 +152,11 @@ async function getSpotifyAccessToken() {
     }
 }
 
-async function getSpotifyDataByURL(url:string): Promise<MusicData> {
+async function getSpotifyDataByURL(url: string): Promise<MusicData> {
     const replaceArr = [
-        {from: 'https://open.spotify.com', to: spotifyApiBaseURL},
-        {from: 'track', to: 'tracks'},
-        {from: 'album', to: 'albums'},
+        { from: 'https://open.spotify.com', to: spotifyApiBaseURL },
+        { from: 'track', to: 'tracks' },
+        { from: 'album', to: 'albums' },
     ];
     const supportedTypes = ['track', 'album'];
     const allowedLink = supportedTypes.some(el => url.includes(el));
@@ -183,14 +193,52 @@ async function getSpotifyDataByURL(url:string): Promise<MusicData> {
     }
 }
 
+async function getAppleMusicURL(data: MusicData): Promise<string> {
+    const baseURL = 'https://itunes.apple.com/search?';
+    let url = `${baseURL}${qs.stringify({
+        'term': data.artist + ' ' + data.album + (data.song ? ' ' + data.song : ''),
+        'media': 'music',
+        'entity': data.song ? 'song' : 'album'
+    })}`
+
+    // console.log(data);
+    try {
+        const res = await axios.get(url);
+        // console.log(res.data);
+        if (res.data.resultCount) {
+            const foundData = res.data.results[0];
+            return data.song ? foundData.trackViewUrl : foundData.collectionViewUrl;
+        } else if(data.song) {
+            url = `${baseURL}${qs.stringify({
+                'term': data.artist + ' ' + data.song,
+                'media': 'music',
+                'entity': 'song'
+            })}`
+            const res = await axios.get(url);
+            if (res.data.resultCount) {
+                return res.data.results[0].collectionViewUrl;
+            }
+        }
+
+        logger.warn('iTunes data not fond. Link: ' + url);
+        return 'Not found 😢';
+
+    } catch (error) {
+        logger.error('Error while getting AppleMusic link. <' + url + '> ' + error.message);
+        throw error;
+    }
+}
+
 function cleanString(str: string) {
     const words = [
         ' - EP',
         '[Deluxe Version]',
-        'feat.'
+        'feat. ',
+        'Edition',
+        ' - Single'
     ];
 
     let newStr = str;
-    words.forEach(el => newStr = str.replace(el, ''))
+    words.forEach(el => newStr = newStr.replace(el, ''))
     return newStr;
 }
