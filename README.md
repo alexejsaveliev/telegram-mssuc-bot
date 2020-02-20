@@ -1,5 +1,6 @@
 # Telegram Bot
-Helps you convert streaming service URL link
+Helps you convert streaming services URL links
+
 Supported servises: 
  - Spotify
  - AppleMusic
