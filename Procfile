@@ -1,1 +1,1 @@
-worker:ts-node/app/app.ts
+worker: ts-node /app/app.ts
