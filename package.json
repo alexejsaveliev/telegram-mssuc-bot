@@ -6,7 +6,7 @@
   "scripts": {
     "tsc": "tsc",
     "dev": "ts-node-dev --respawn --transpileOnly ./app/app.ts",
-    "start": "ts-node ./app/app.ts",
+    "start": "ts-node ./app/app.ts $PORT",
     "prod": "tsc && node ./build/app.js"
   },
   "author": "",
