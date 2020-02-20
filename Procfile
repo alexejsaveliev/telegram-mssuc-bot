@@ -1,1 +1,1 @@
-worker: ts-node /app/app.ts $PORT
+worker: npm run start $PORT
