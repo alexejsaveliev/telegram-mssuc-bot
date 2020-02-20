@@ -92,7 +92,13 @@ async function getAppleMusicDataByURL(url: string): Promise<MusicData> {
 
         if (root.valid) {
             resData.album = (<HTMLElement>root).querySelector('.album-header .product-header__title').text.trim();
-            resData.artist = (<HTMLElement>root).querySelector('.album-header .album-header__identity').text.trim();
+                  
+            let artist = (<HTMLElement>root).querySelector('.product-hero__tracks table .is-deep-linked .table__row__titles .we-selectable-item__link-text__subcopy')?.text;
+            if (!artist) {
+                artist = (<HTMLElement>root).querySelector('.album-header .album-header__identity').text.trim();
+            }
+            resData.artist = artist;
+
             const song = (<HTMLElement>root).querySelector('.product-hero__tracks table .is-deep-linked .table__row__titles .we-selectable-item__link-text__headline')?.text;
             if (song) {
                 resData.song = song.trim();
@@ -122,7 +128,7 @@ async function getSpotifyData(type: string, queryString: string) {
                 'Authorization': 'Bearer ' + accessToken
             }
         });
-        //   console.log(res.data.tracks.items)
+        // console.log(res.data.tracks.items)
         return res.data;
     } catch (error) {
         throw error;
