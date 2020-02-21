@@ -234,11 +234,11 @@ async function getAppleMusicURL(data: MusicData): Promise<string> {
             }
         }
 
-        logger.warn('iTunes data not fond. Link: ' + url);
+        logger.warn('iTunes data not fond. Link: ' + url + JSON.stringify(data));
         return 'Not found 😢';
 
     } catch (error) {
-        logger.error('Error while getting AppleMusic link. <' + url + '> ' + error.message);
+        logger.error('Error while getting AppleMusic link. <' + url + '> ' + JSON.stringify(data) + error.message);
         throw error;
     }
 }
