@@ -3,7 +3,7 @@ import axios from 'axios';
 import { parse, HTMLElement } from 'node-html-parser';
 import qs from 'querystring';
 
-import logger from './utils/logger'
+import logger from './utils/logger';
 import { TELEGRAM_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_REFRESH_TOKEN, SPOTIFY_SECRET } from './utils/secrets';
 
 const allowedServices = [
@@ -17,13 +17,12 @@ interface MusicData {
     artist: string,
     album: string,
     song?: string
-}
+};
 
 const apiKey = TELEGRAM_API_KEY || '';
 
 const bot = new Telegraf(apiKey);
 bot.start((ctx: ContextMessageUpdate) => ctx.reply('Welcome'));
-bot.help((ctx: ContextMessageUpdate) => ctx.reply('Send me a sticker'));
 bot.on('text', async (ctx: ContextMessageUpdate) => {
     const message = ctx.update.message?.text || '';
     // const messageIncludeLink = allowedServices.some(({ id }) => message.includes(id));
@@ -208,21 +207,30 @@ async function getAppleMusicURL(data: MusicData): Promise<string> {
     })}`
 
     // console.log(data);
+    // console.log(url)
+    interface anyObj {
+        [propName: string]: any;
+    }
     try {
         const res = await axios.get(url);
         // console.log(res.data);
         if (res.data.resultCount) {
-            const foundData = res.data.results[0];
-            return data.song ? foundData.trackViewUrl : foundData.collectionViewUrl;
+            if ((<Array<anyObj>>res.data.results).some(el => el.artistName == data.artist)) {
+                const foundData = res.data.results[0];
+                return data.song ? foundData.trackViewUrl : foundData.collectionViewUrl;
+            }
         } else if(data.song) {
             url = `${baseURL}${qs.stringify({
                 'term': data.artist + ' ' + data.song,
                 'media': 'music',
                 'entity': 'song'
-            })}`
+            })}`;
+            // console.log(url)
             const res = await axios.get(url);
             if (res.data.resultCount) {
-                return res.data.results[0].collectionViewUrl;
+                if ((<Array<anyObj>>res.data.results).some(el => el.artistName == data.artist)) {
+                    return res.data.results[0].collectionViewUrl;
+                }
             }
         }
 
