@@ -6,13 +6,15 @@ const myFormat = printf(({ level, message, label, timestamp }) => {
     return `${timestamp} [${label}] ${level.toUpperCase()}: ${message}`;
 });
 
-const options: winston.LoggerOptions = {
-    // format: combine(
-    //     label({ label: process.env.NODE_ENV }),
-    //     timestamp(),
-    //     myFormat
-    // ),
-    transports: [
+const options: winston.LoggerOptions = {};
+
+if (process.env.NODE_ENV !== "production") {
+    options.format = combine(
+        label({ label: process.env.NODE_ENV }),
+        timestamp(),
+        myFormat
+    );
+    options.transports = [
         new winston.transports.Console({
             level: process.env.NODE_ENV === "production" ? "error" : "debug"
         }),
