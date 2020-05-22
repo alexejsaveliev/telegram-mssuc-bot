@@ -92,7 +92,7 @@ async function getAppleMusicDataByURL(url: string): Promise<MusicData> {
         if (root.valid) {
             resData.album = (<HTMLElement>root).querySelector('.album-header-metadata .product-name').text.trim();
                   
-            let artist = (<HTMLElement>root).querySelector('.album-header-metadata .product-creator a')?.text;
+            let artist = (<HTMLElement>root).querySelector('.album-header-metadata .product-creator a')?.text.trim();
             // if (!artist) {
             //     artist = (<HTMLElement>root).querySelector('.album-header .album-header__identity').text.trim();
             // }
