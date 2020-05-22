@@ -90,15 +90,15 @@ async function getAppleMusicDataByURL(url: string): Promise<MusicData> {
         const root = parse(res.data);
 
         if (root.valid) {
-            resData.album = (<HTMLElement>root).querySelector('.album-header .product-header__title').text.trim();
+            resData.album = (<HTMLElement>root).querySelector('.album-header-metadata .product-name').text.trim();
                   
-            let artist = (<HTMLElement>root).querySelector('.product-hero__tracks table .is-deep-linked .table__row__titles .we-selectable-item__link-text__subcopy')?.text;
-            if (!artist) {
-                artist = (<HTMLElement>root).querySelector('.album-header .album-header__identity').text.trim();
-            }
+            let artist = (<HTMLElement>root).querySelector('.album-header-metadata .product-creator a')?.text;
+            // if (!artist) {
+            //     artist = (<HTMLElement>root).querySelector('.album-header .album-header__identity').text.trim();
+            // }
             resData.artist = artist;
 
-            const song = (<HTMLElement>root).querySelector('.product-hero__tracks table .is-deep-linked .table__row__titles .we-selectable-item__link-text__headline')?.text;
+            const song = (<HTMLElement>root).querySelector('.songs-list .selected .song-name-wrapper .song-name')?.text;
             if (song) {
                 resData.song = song.trim();
             }
