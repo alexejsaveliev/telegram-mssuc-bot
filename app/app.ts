@@ -249,7 +249,8 @@ function cleanString(str: string) {
         '[Deluxe Version]',
         'feat. ',
         'Edition',
-        ' - Single'
+        ' - Single',
+        ' &',
     ];
 
     let newStr = str;
