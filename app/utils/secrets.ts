@@ -18,10 +18,6 @@ export const SPOTIFY_SECRET = process.env["SPOTIFY_SECRET"];
 export const SPOTIFY_REFRESH_TOKEN = process.env["SPOTIFY_REFRESH_TOKEN"];
 
 if (!TELEGRAM_API_KEY) {
-    if (prod) {
-        logger.error("Set TELEGRAM_API_KEY environment variable.");
-    } else {
-        logger.error("No mongo connection string. Set MONGODB_URI_LOCAL environment variable.");
-    }
+    logger.error("Set TELEGRAM_API_KEY environment variable.");
     process.exit(1);
 }

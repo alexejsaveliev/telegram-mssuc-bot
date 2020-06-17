@@ -1,10 +1,10 @@
-import Telegraf, { ContextMessageUpdate } from 'telegraf';
+import Telegraf, {ContextMessageUpdate} from 'telegraf';
 import axios from 'axios';
-import { parse, HTMLElement } from 'node-html-parser';
+import {HTMLElement, parse} from 'node-html-parser';
 import qs from 'querystring';
 
 import logger from './utils/logger';
-import { TELEGRAM_API_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_REFRESH_TOKEN, SPOTIFY_SECRET } from './utils/secrets';
+import {SPOTIFY_CLIENT_ID, SPOTIFY_REFRESH_TOKEN, SPOTIFY_SECRET, TELEGRAM_API_KEY} from './utils/secrets';
 
 const allowedServices = [
     { id: 'open.spotify.com', name: 'Spotify' },
@@ -91,12 +91,7 @@ async function getAppleMusicDataByURL(url: string): Promise<MusicData> {
 
         if (root.valid) {
             resData.album = (<HTMLElement>root).querySelector('.album-header-metadata .product-name').text.trim();
-                  
-            let artist = (<HTMLElement>root).querySelector('.album-header-metadata .product-creator a')?.text.trim();
-            // if (!artist) {
-            //     artist = (<HTMLElement>root).querySelector('.album-header .album-header__identity').text.trim();
-            // }
-            resData.artist = artist;
+            resData.artist = (<HTMLElement>root).querySelector('.album-header-metadata .product-creator a')?.text.trim();
 
             const song = (<HTMLElement>root).querySelector('.songs-list .selected .song-name-wrapper .song-name')?.text;
             if (song) {
