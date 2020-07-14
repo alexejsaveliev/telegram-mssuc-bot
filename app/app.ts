@@ -35,7 +35,8 @@ bot.on('text', async (ctx: ContextMessageUpdate) => {
             respMsg = await getSpotifyURL(message);
         } else if (message.includes('open.spotify.com')) {
             const spotifyData = await getSpotifyDataByURL(message);
-            respMsg = await getAppleMusicURL(spotifyData);
+            // respMsg = await getAppleMusicURLByItynes(spotifyData);
+            respMsg = await getAppleMusicUrl(spotifyData);
         } else {
             respMsg = 'Unsupported data 🤷‍♂️';
         }
@@ -193,7 +194,7 @@ async function getSpotifyDataByURL(url: string): Promise<MusicData> {
     }
 }
 
-async function getAppleMusicURL(data: MusicData): Promise<string> {
+async function getAppleMusicURLByItynes(data: MusicData): Promise<string> {
     const baseURL = 'https://itunes.apple.com/search?';
     let url = `${baseURL}${qs.stringify({
         'term': data.artist + ' ' + data.album + (data.song ? ' ' + data.song : ''),
@@ -235,6 +236,40 @@ async function getAppleMusicURL(data: MusicData): Promise<string> {
     } catch (error) {
         logger.error('Error while getting AppleMusic link. <' + url + '> ' + JSON.stringify(data) + error.message);
         throw error;
+    }
+}
+
+async function getAppleMusicUrl(data: MusicData) {
+    const isSong = !!data.song;
+    const baseUrl = 'https://music.apple.com/us/search?';
+    const url = `${baseUrl}${qs.stringify({
+        'term': data.artist + ' ' + data.album + (isSong ? ' ' + data.song : ''),
+    })}`;
+
+    let resUrl;
+
+    try {
+        const res = await axios.get(url);
+        const root = parse(res.data);
+        let musicDataElement;
+        if (root.valid) {
+            if (isSong) {
+                musicDataElement = (<HTMLElement>root).querySelector('.page-container .dt-shelf--search-song .shelf-grid__list .shelf-grid__list-item .artwork-overlay button');
+            } else {
+                musicDataElement = (<HTMLElement>root).querySelector('.page-container .dt-shelf--search-album .shelf-grid__list .shelf-grid__list-item .lockup__controls button');
+            }
+
+            const receivedData = JSON.parse((musicDataElement as any).getAttribute('data-metrics-click'));
+            console.log(receivedData.actionUrl);
+            resUrl = receivedData.actionUrl;
+        } else {
+            new Error("HTML response does not valid");
+        }
+
+        return resUrl;
+    } catch (e) {
+        logger.error(e.message);
+        console.error(e);
     }
 }
 
