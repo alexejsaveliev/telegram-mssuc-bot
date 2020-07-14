@@ -268,8 +268,8 @@ async function getAppleMusicUrl(data: MusicData) {
 
         return resUrl;
     } catch (e) {
-        logger.error(e.message);
-        console.error(e);
+        logger.error('Error while parsing AppleMusic data! --> ' + e.message + ' | URL: ' + url);
+        throw new Error('Error while parsing AppleMusic data! --> ' + e.message);
     }
 }
 
